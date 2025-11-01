@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Your Name - Polar Bear Portfolio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Add particles.js library for animated snow -->
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+</head>
+<body>
+    <div id="particles-js"></div>
+    <div class="container">
+        <header>
+            <h1>Polar Bear Project Portfolio</h1>
+            <nav>
+                <a href="#about">About</a>
+                <a href="#projects">Projects</a>
+                <a href="#contact">Contact</a>
+            </nav>
+        </header>
+        <main>
+            <section id="about" class="glass">
+                <h2>About Me</h2>
+                <p>
+                    I am a Data Science master's student with a passion for environmental analytics, wildlife conservation, and machine learning. My work bridges technical expertise and a dedication to understanding our natural world—especially the Arctic!
+                </p>
+            </section>
+            <section id="projects" class="glass">
+                <h2>Featured Project</h2>
+                <div class="project-card">
+                    <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80" alt="Polar Bear in Snow">
+                    <div>
+                        <h3>Polar Bear Habitat Analysis</h3>
+                        <p>
+                            Leveraged geospatial, movement, and climate data to model and predict optimal polar bear habitats under changing Arctic conditions. Utilized XGBoost and deep learning for ecological forecasting and showcased findings in interactive Tableau dashboards.
+                        </p>
+                        <div class="tags">
+                            <span class="tag">Python</span>
+                            <span class="tag">Pandas</span>
+                            <span class="tag">Geospatial</span>
+                            <span class="tag">XGBoost</span>
+                            <span class="tag">Deep Learning</span>
+                            <span class="tag">Tableau</span>
+                        </div>
+                        <a href="https://github.com/yourusername/polar-bear-project" target="_blank">GitHub Repo &rarr;</a>
+                    </div>
+                </div>
+            </section>
+            <section id="contact" class="glass">
+                <h2>Contact</h2>
+                <p>
+                    Got questions about the Arctic, data science, or collaboration?<br>
+                    <strong>Email:</strong> <a href="mailto:your@email.address">your@email.address</a><br>
+                    <strong>LinkedIn:</strong> <a href="https://linkedin.com/in/yourprofile" target="_blank">linkedin.com/in/yourprofile</a>
+                </p>
+            </section>
+        </main>
+        <footer>
+            &copy; 2025 Your Name • Built with Frost and Code
+        </footer>
+    </div>
+    <script>
+    // particles.js snow config
+    particlesJS("particles-js", {
+        "particles": {
+            "number": {"value": 80, "density": {"enable": true, "value_area": 800}},
+            "color": {"value": "#ffffff"},
+            "shape": {"type": "circle"},
+            "opacity": {"value": 0.7, "random": true, "anim": {"enable": false}},
+            "size": {"value": 6, "random": true, "anim": {"enable": false}},
+            "move": {
+                "enable": true,
+                "speed": 1.5,
+                "direction": "bottom",
+                "random": true,
+                "straight": false,
+                "out_mode": "out",
+                "bounce": false
+            }
+        },
+        "interactivity": {
+            "detect_on": "canvas",
+            "events": {
+                "onhover": {"enable": true, "mode": "repulse"},
+                "onclick": {"enable": false}
+            }
+        },
+        "retina_detect": true
+    });
+    </script>
+</body>
+</html>
