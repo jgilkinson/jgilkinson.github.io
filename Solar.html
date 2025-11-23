@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Predicting Solar Output | Alpha &amp; Bravo Plants</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg: #020617;
+      --glass: rgba(15, 23, 42, 0.75);
+      --glass-soft: rgba(15, 23, 42, 0.65);
+      --border-soft: rgba(148, 163, 184, 0.45);
+      --accent-sun: #facc15;
+      --accent-sun-strong: #f97316;
+      --accent-sky: #38bdf8;
+      --accent-lime: #4ade80;
+      --text-main: #e5e7eb;
+      --text-soft: #9ca3af;
+      --text-strong: #f9fafb;
+      --shadow-glass: 0 18px 48px rgba(15, 23, 42, 0.98);
+      --radius-xl: 22px;
+      --radius-xxl: 28px;
+      --transition-fast: 200ms ease-out;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+        "Segoe UI", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 32px 18px 42px;
+      color: var(--text-main);
+      background:
+        radial-gradient(circle at 10% -10%, rgba(250, 204, 21, 0.5), transparent 55%),
+        radial-gradient(circle at 90% 0%, rgba(56, 189, 248, 0.5), transparent 55%),
+        radial-gradient(circle at 15% 120%, rgba(74, 222, 128, 0.3), transparent 60%),
+        linear-gradient(to bottom, #020617, #020617 40%, #020617);
+    }
+
+    .noise-overlay {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      opacity: 0.16;
+      mix-blend-mode: soft-light;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='noStitch' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.7' /%3E%3C/svg%3E");
+      z-index: -1;
+    }
+
+    .page {
+      max-width: 1040px;
+      width: 100%;
+      border-radius: var(--radius-xxl);
+      background:
+        radial-gradient(circle at top left, rgba(148, 163, 184, 0.2), transparent 60%),
+        radial-gradient(circle at bottom right, rgba(15, 23, 42, 0.96), #020617);
+      box-shadow:
+        0 0 0 1px rgba(148, 163, 184, 0.18),
+        0 32px 120px rgba(15, 23, 42, 1);
+      padding: 22px 22px 26px;
+      backdrop-filter: blur(26px) saturate(140%);
+    }
+
+    @media (min-width: 900px) {
+      .page {
+        padding: 26px 30px 34px;
+      }
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at 30% 20%, #fefce8 0, #fde68a 28%, transparent 60%),
+        conic-gradient(from 210deg, #facc15, #38bdf8, #4ade80, #f97316, #facc15);
+      box-shadow:
+        0 0 0 1px rgba(254, 240, 138, 0.9),
+        0 0 26px rgba(250, 204, 21, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #020617;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-shadow: 0 0 8px rgba(15, 23, 42, 0.6);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-text span:first-child {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: var(--text-soft);
+    }
+
+    .brand-text span:last-child {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-strong);
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: var(--text-soft);
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      background: transparent;
+      transition: color var(--transition-fast), border-color var(--transition-fast),
+                  background var(--transition-fast), transform 120ms ease-out;
+      white-space: nowrap;
+    }
+
+    nav a:hover {
+      color: var(--accent-sky);
+      border-color: rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .nav-pill {
+      border-radius: 999px;
+      padding: 6px 12px;
+      background: radial-gradient(circle at 0% 0%, rgba(250, 204, 21, 0.95), rgba(56, 189, 248, 0.9));
+      color: #0b1120;
+      font-weight: 600;
+      border: 1px solid rgba(254, 249, 195, 0.9);
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.7),
+        0 0 22px rgba(250, 204, 21, 0.95);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+                  background-position 180ms ease-out;
+      background-size: 200% 200%;
+      background-position: 0% 50%;
+    }
+
+    .nav-pill:hover {
+      transform: translateY(-1px) translateX(0.5px);
+      background-position: 100% 50%;
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.8),
+        0 0 32px rgba(250, 204, 21, 1);
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 3fr);
+      gap: 18px;
+    }
+
+    @media (min-width: 900px) {
+      main {
+        grid-template-columns: minmax(0, 3.4fr) minmax(0, 2.3fr);
+        gap: 22px;
+      }
+    }
+
+    /* HERO */
+
+    .hero {
+      position: relative;
+      border-radius: var(--radius-xxl);
+      background: linear-gradient(
+          135deg,
+          rgba(15, 23, 42, 0.95),
+          rgba(15, 23, 42, 0.9)
+        );
+      padding: 22px 18px 20px;
+      overflow: hidden;
+      box-shadow: var(--shadow-glass);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+    }
+
+    @media (min-width: 900px) {
+      .hero {
+        padding: 26px 24px 24px;
+      }
+    }
+
+    .hero-sunbeams {
+      position: absolute;
+      inset: -120%;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(250, 204, 21, 0.6), transparent 55%),
+        radial-gradient(circle at 85% 0%, rgba(56, 189, 248, 0.6), transparent 55%),
+        radial-gradient(circle at 50% 120%, rgba(34, 197, 94, 0.5), transparent 60%);
+      opacity: 0.9;
+      mix-blend-mode: screen;
+      filter: blur(8px);
+      animation: driftSun 32s linear infinite alternate;
+    }
+
+    .hero-grid-overlay {
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(
+          rgba(148, 163, 184, 0.12) 1px,
+          transparent 1px
+        ),
+        linear-gradient(
+          90deg,
+          rgba(148, 163, 184, 0.08) 1px,
+          transparent 1px
+        );
+      background-size: 40px 40px;
+      mix-blend-mode: soft-light;
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    @keyframes driftSun {
+      0% { transform: translate3d(-4%, 4%, 0) scale(1.04); }
+      50% { transform: translate3d(4%, -3%, 0) scale(1.0); }
+      100% { transform: translate3d(-3%, 3%, 0) scale(1.06); }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      background: radial-gradient(circle at 0% 0%, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.9));
+      color: var(--text-soft);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+    }
+
+    .chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, #fefce8, #facc15);
+      box-shadow: 0 0 12px rgba(250, 204, 21, 0.95);
+    }
+
+    .chip-soft {
+      border-style: dashed;
+      border-color: rgba(148, 163, 184, 0.4);
+      background: rgba(15, 23, 42, 0.82);
+    }
+
+    .hero-title {
+      font-size: clamp(1.9rem, 3vw, 2.4rem);
+      line-height: 1.1;
+      font-weight: 750;
+      color: var(--text-strong);
+      letter-spacing: 0.02em;
+      margin-bottom: 8px;
+      text-shadow: 0 0 18px rgba(15, 23, 42, 0.9);
+    }
+
+    .hero-subtitle {
+      font-size: 0.92rem;
+      color: var(--text-soft);
+      max-width: 37rem;
+      margin-bottom: 18px;
+    }
+
+    .hero-subtitle strong {
+      color: var(--accent-sun);
+      font-weight: 600;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .hero-meta span {
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(51, 65, 85, 0.9);
+    }
+
+    @media (min-width: 900px) {
+      .hero-main-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 2.5fr) minmax(0, 2.1fr);
+        gap: 18px;
+        align-items: flex-start;
+      }
+    }
+
+    .hero-left {
+      margin-bottom: 16px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .btn-primary {
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: #020617;
+      background:
+        linear-gradient(120deg, #fef9c3, #facc15, #38bdf8);
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.85),
+        0 16px 45px rgba(15, 23, 42, 0.9),
+        0 0 32px rgba(250, 204, 21, 0.9);
+      transition: transform var(--transition-fast),
+                  box-shadow var(--transition-fast),
+                  background-position 220ms ease-out;
+      background-size: 220% 220%;
+      background-position: 0% 50%;
+      text-decoration: none;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1.5px);
+      background-position: 100% 50%;
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.9),
+        0 20px 60px rgba(15, 23, 42, 1),
+        0 0 42px rgba(250, 204, 21, 1);
+    }
+
+    .btn-ghost {
+      border-radius: 999px;
+      padding: 8px 13px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      background: rgba(15, 23, 42, 0.88);
+      color: var(--text-main);
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: border-color var(--transition-fast),
+                  background var(--transition-fast),
+                  color var(--transition-fast),
+                  transform 120ms ease-out;
+    }
+
+    .btn-ghost:hover {
+      border-color: rgba(148, 163, 184, 1);
+      background: rgba(15, 23, 42, 0.98);
+      transform: translateY(-1px);
+    }
+
+    .scroll-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      margin-top: 6px;
+      color: rgba(148, 163, 184, 0.88);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+
+    .scroll-indicator-dot {
+      width: 6px;
+      height: 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scroll-indicator-dot::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      width: 2px;
+      height: 5px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.95);
+      transform: translateX(-50%);
+      animation: scrollDot 1300ms ease-in-out infinite;
+    }
+
+    @keyframes scrollDot {
+      0% { top: 3px; opacity: 0; }
+      20% { top: 3px; opacity: 1; }
+      100% { top: 8px; opacity: 0; }
+    }
+
+    /* SOLAR PANEL VIZ */
+
+    .hero-right {
+      position: relative;
+      border-radius: var(--radius-xl);
+      background: radial-gradient(circle at 20% 0%, #0b1120, #020617);
+      overflow: hidden;
+      min-height: 170px;
+      padding: 14px 14px 12px;
+      box-shadow:
+        inset 0 0 0 1px rgba(15, 23, 42, 0.9),
+        0 14px 40px rgba(15, 23, 42, 1);
+    }
+
+    .hero-right-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: rgba(226, 232, 240, 0.92);
+      margin-bottom: 8px;
+    }
+
+    .hero-right-chip {
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .panel-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sun-orbit {
+      position: absolute;
+      top: 6%;
+      right: 10%;
+      width: 54px;
+      height: 54px;
+      border-radius: 999px;
+      background:
+        radial-gradient(circle at 30% 25%, #fefce8, #fde68a 42%, #f97316 80%);
+      box-shadow:
+        0 0 0 1px rgba(253, 224, 171, 0.9),
+        0 0 30px rgba(251, 191, 36, 1);
+    }
+
+    .panel-base {
+      position: absolute;
+      bottom: 10%;
+      left: 8%;
+      right: 4%;
+      height: 44%;
+      border-radius: 18px;
+      background: linear-gradient(160deg, #0f172a, #020617);
+      box-shadow:
+        0 0 0 1px rgba(30, 64, 175, 0.8),
+        0 14px 30px rgba(15, 23, 42, 1);
+      overflow: hidden;
+    }
+
+    .panel-grid {
+      position: absolute;
+      inset: 12% 10% 18% 10%;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 3px;
+    }
+
+    .cell {
+      border-radius: 4px;
+      background: radial-gradient(circle at 0 0, #1d4ed8, #020617);
+      box-shadow:
+        inset 0 0 0 1px rgba(129, 140, 248, 0.4),
+        0 0 10px rgba(37, 99, 235, 0.5);
+    }
+
+    .cell.alpha {
+      box-shadow:
+        inset 0 0 0 1px rgba(52, 211, 153, 0.5),
+        0 0 10px rgba(52, 211, 153, 0.6);
+    }
+
+    .panel-stand {
+      position: absolute;
+      bottom: 0;
+      left: 14%;
+      right: 14%;
+      height: 18%;
+      background: linear-gradient(to top, #020617, #0b1120);
+    }
+
+    .panel-stand::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -22%;
+      width: 38%;
+      height: 3px;
+      border-radius: 999px;
+      transform: translateX(-50%);
+      background: linear-gradient(90deg, rgba(248, 250, 252, 0.1), rgba(148, 163, 184, 0.5), rgba(248, 250, 252, 0.1));
+    }
+
+    .irradiation-band {
+      position: absolute;
+      left: 8%;
+      right: 4%;
+      top: 22%;
+      height: 14%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(56, 189, 248, 0.1), rgba(250, 204, 21, 0.8), rgba(249, 115, 22, 0.9));
+      opacity: 0.85;
+      filter: blur(2px);
+    }
+
+    .hero-stat-row {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 11px;
+      color: rgba(226, 232, 240, 0.96);
+    }
+
+    .hero-stat {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.85);
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-stat strong {
+      color: #facc15;
+      font-weight: 600;
+    }
+
+    /* RIGHT COLUMN CARDS */
+
+    .side-column {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .card {
+      border-radius: var(--radius-xl);
+      background: var(--glass-soft);
+      box-shadow: var(--shadow-glass);
+      border: 1px solid var(--border-soft);
+      padding: 14px 14px 13px;
+      backdrop-filter: blur(26px) saturate(160%);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 9px;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-strong);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .card-tag {
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      color: rgba(148, 163, 184, 0.95);
+    }
+
+    .card p {
+      font-size: 13px;
+      color: var(--text-soft);
+      line-height: 1.5;
+      margin-bottom: 7px;
+    }
+
+    .card-list {
+      list-style: none;
+      font-size: 13px;
+      color: var(--text-soft);
+      display: grid;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .card-list li::before {
+      content: "•";
+      margin-right: 6px;
+      color: var(--accent-sun-strong);
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    .pill {
+      font-size: 11px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: rgba(209, 213, 219, 0.98);
+      background: rgba(15, 23, 42, 0.94);
+    }
+
+    .pill-sun {
+      border-color: rgba(250, 204, 21, 0.9);
+      color: #fef9c3;
+      background: radial-gradient(circle at 0 0, rgba(250, 204, 21, 0.18), rgba(15, 23, 42, 0.98));
+    }
+
+    .pill-sky {
+      border-color: rgba(56, 189, 248, 0.9);
+      color: #e0f2fe;
+      background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.16), rgba(15, 23, 42, 0.98));
+    }
+
+    .pill-lime {
+      border-color: rgba(74, 222, 128, 0.9);
+      color: #dcfce7;
+      background: radial-gradient(circle at 0 0, rgba(34, 197, 94, 0.16), rgba(15, 23, 42, 0.98));
+    }
+
+    /* FEATURED SECTION */
+
+    .section {
+      margin-top: 18px;
+      border-radius: var(--radius-xl);
+      background: var(--glass);
+      padding: 13px 14px 12px;
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      box-shadow: var(--shadow-glass);
+      backdrop-filter: blur(24px) saturate(160%);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      gap: 10px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: rgba(148, 163, 184, 0.96);
+    }
+
+    .section h3 {
+      font-size: 15px;
+      color: var(--text-strong);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .section p {
+      font-size: 13px;
+      color: var(--text-soft);
+      line-height: 1.5;
+      margin-bottom: 7px;
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 640px) {
+      .section-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .metric-card {
+      border-radius: 18px;
+      padding: 8px 10px 7px;
+      background: linear-gradient(
+        135deg,
+        rgba(15, 23, 42, 0.96),
+        rgba(15, 23, 42, 0.9)
+      );
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.9);
+    }
+
+    .metric-label {
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.92);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      margin-bottom: 3px;
+    }
+
+    .metric-value {
+      font-size: 19px;
+      font-weight: 700;
+      color: #fef9c3;
+      margin-bottom: 2px;
+    }
+
+    .metric-caption {
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.9);
+    }
+
+    footer {
+      margin-top: 12px;
+      font-size: 11px;
+      color: rgba(148, 163, 184, 0.9);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    footer a {
+      color: rgba(148, 163, 184, 0.9);
+      text-decoration: none;
+      border-bottom: 1px dashed transparent;
+      transition: border-color var(--transition-fast), color var(--transition-fast);
+    }
+
+    footer a:hover {
+      border-color: rgba(148, 163, 184, 0.9);
+      color: var(--accent-sky);
+    }
+  </style>
+</head>
+<body>
+  <div class="noise-overlay"></div>
+
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="brand-icon">J</div>
+        <div class="brand-text">
+          <span>DSC 680 · solar modeling</span>
+          <span>Predicting Solar Output · Alpha &amp; Bravo</span>
+        </div>
+      </div>
+      <nav>
+        <a href="#overview">Overview</a>
+        <a href="#methods">Methods</a>
+        <a href="#modeling">Modeling</a>
+        <a href="#insights">Insights</a>
+        <!-- Point this to your repo for the notebook -->
+        <a class="nav-pill" href="https://github.com/jgilkinson" target="_blank" rel="noopener">
+          <span>View Notebook</span> <span>↗</span>
+        </a>
+      </nav>
+    </header>
+
+    <main>
+      <!-- HERO -->
+      <section class="hero" id="overview">
+        <div class="hero-sunbeams"></div>
+        <div class="hero-grid-overlay"></div>
+
+        <div class="hero-content">
+          <div class="hero-chip-row">
+            <div class="chip">
+              <span class="chip-dot"></span>
+              <span>Solar Plants Alpha &amp; Bravo</span>
+            </div>
+            <div class="chip chip-soft">
+              <span>Generation &amp; weather sensor data</span>
+            </div>
+          </div>
+
+          <h1 class="hero-title">Turning Sunlight into a Predictive Model</h1>
+          <p class="hero-subtitle">
+            Using paired <strong>generation</strong> and <strong>weather sensor</strong> data
+            from two solar plants (Alpha and Bravo), this notebook builds a supervised
+            learning pipeline to predict <strong>DC power</strong> from features such as
+            solar irradiation and module temperature — the first step toward more reliable
+            solar output forecasting.
+          </p>
+
+          <div class="hero-meta">
+            <span>Python · pandas · scikit-learn</span>
+            <span>RandomForestRegressor for DC power</span>
+            <span>Daytime-only, train/test split by date</span>
+          </div>
+
+          <div class="hero-main-grid">
+            <div class="hero-left">
+              <div class="hero-actions">
+                <!-- Update these hrefs to your real files -->
+                <a class="btn-primary" href="#" target="_blank">
+                  <span>Download Report</span>
+                  <span>⬇</span>
+                </a>
+                <a class="btn-ghost" href="#" target="_blank">
+                  <span>Open Untitled1.ipynb</span>
+                  <span>⤴</span>
+                </a>
+              </div>
+              <div class="scroll-indicator">
+                <div class="scroll-indicator-dot"></div>
+                <span>Scroll for pipeline &amp; results</span>
+              </div>
+            </div>
+
+            <!-- Solar viz -->
+            <div class="hero-right">
+              <div class="hero-right-header">
+                <span>Alpha &amp; Bravo Concept View</span>
+                <span class="hero-right-chip">DC Power vs. Irradiation</span>
+              </div>
+              <div class="panel-wrapper">
+                <div class="irradiation-band"></div>
+                <div class="sun-orbit"></div>
+
+                <div class="panel-base">
+                  <div class="panel-grid">
+                    <!-- Alpha cells (left columns) -->
+                    <div class="cell alpha"></div>
+                    <div class="cell alpha"></div>
+                    <div class="cell alpha"></div>
+                    <div class="cell alpha"></div>
+                    <div class="cell alpha"></div>
+                    <div class="cell"></div>
+
+                    <div class="cell alpha"></div>
+                    <div class="cell alpha"></div>
+                    <div class="cell alpha"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+
+                    <!-- Bravo cells (right columns) -->
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                    <div class="cell"></div>
+                  </div>
+                  <div class="panel-stand"></div>
+                </div>
+
+                <div class="hero-stat-row">
+                  <div class="hero-stat">
+                    <strong>2 plants</strong> · Alpha &amp; Bravo
+                  </div>
+                  <div class="hero-stat">
+                    <strong>Weather + generation</strong> merged on timestamp
+                  </div>
+                  <div class="hero-stat">
+                    <strong>Daytime-only</strong> rows for training &amp; testing
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN CARDS -->
+      <aside class="side-column">
+        <section class="card" id="methods">
+          <div class="card-header">
+            <div class="card-title">Data Pipeline</div>
+            <div class="card-tag">Alpha &amp; Bravo</div>
+          </div>
+          <p>
+            The notebook starts by loading four CSV files — generation and weather
+            sensor data for each plant — then cleans and merges them into analysis-ready
+            DataFrames for Alpha and Bravo.
+          </p>
+          <ul class="card-list">
+            <li>Load <code>Plant_1</code> and <code>Plant_2</code> generation data</li>
+            <li>Load corresponding weather sensor data for each plant</li>
+            <li>Standardize timestamps (e.g., <code>DATE_TIME</code> → <code>DT_ROUND</code>)</li>
+            <li>Merge generation + weather on rounded datetime</li>
+            <li>Filter to daytime rows (irradiation &gt; 0.1, DC power &gt; 10)</li>
+          </ul>
+          <div class="pill-row">
+            <span class="pill pill-sky">pandas ETL</span>
+            <span class="pill">timestamp alignment</span>
+            <span class="pill pill-lime">plant-specific cleaning</span>
+          </div>
+        </section>
+
+        <section class="card" id="modeling">
+          <div class="card-header">
+            <div class="card-title">Modeling Approach</div>
+            <div class="card-tag">Random Forest</div>
+          </div>
+          <p>
+            For each plant, the cleaned data is split into a training window and a test
+            window based on date. A RandomForestRegressor is then trained to predict
+            <code>DC_POWER</code> from core weather features.
+          </p>
+          <ul class="card-list">
+            <li>Convert <code>DT_ROUND</code> to datetime and sort by time</li>
+            <li>Use initial block of days for training, following days for testing</li>
+            <li>Feature set includes <code>IRRADIATION</code> and <code>MODULE_TEMPERATURE</code></li>
+            <li>Train RandomForestRegressor per plant</li>
+            <li>Evaluate with RMSE and R² on test sets</li>
+          </ul>
+          <div class="pill-row">
+            <span class="pill pill-sun">DC power prediction</span>
+            <span class="pill">RMSE &amp; R² metrics</span>
+            <span class="pill pill-sky">per-plant models</span>
+          </div>
+        </section>
+
+        <section class="card" id="insights">
+          <div class="card-header">
+            <div class="card-title">Exploration &amp; Insights</div>
+            <div class="card-tag">EDA</div>
+          </div>
+          <p>
+            The notebook includes exploratory plots to understand how weather drives
+            output, using scatterplots and correlation heatmaps to visualize
+            relationships between DC power and key features.
+          </p>
+          <ul class="card-list">
+            <li>Scatter: <code>DC_POWER</code> vs. <code>IRRADIATION</code> colored by module temperature</li>
+            <li>Correlation heatmap for Alpha's numeric features</li>
+            <li>Checks for missing data and timestamp misalignment</li>
+            <li>Comparison of feature–target relationships for Alpha vs. Bravo</li>
+          </ul>
+          <div class="pill-row">
+            <span class="pill pill-sun">irradiation as main driver</span>
+            <span class="pill pill-lime">temperature effects</span>
+            <span class="pill">plant-to-plant differences</span>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <!-- FEATURED PROJECT SECTION -->
+    <section class="section">
+      <div class="section-header">
+        <div class="section-title">Featured solar modeling notebook</div>
+        <div class="card-tag">From CSVs to forecasts</div>
+      </div>
+      <h3>Building a Reusable Solar Output Prediction Workflow</h3>
+      <p>
+        Starting from raw CSV files for two separate plants, this project assembles a
+        repeatable workflow: ingest generation and weather sensor data, align timestamps,
+        filter to meaningful daytime observations, train a RandomForest model on
+        irradiation and module temperature, and evaluate test performance. The end
+        result is a template for extending to more features, plants, and forecasting
+        horizons.
+      </p>
+
+      <div class="section-grid">
+        <div class="metric-card">
+          <div class="metric-label">Core features</div>
+          <div class="metric-value">2+</div>
+          <div class="metric-caption">
+            Solar irradiation and module temperature form the backbone of the
+            DC power prediction model, with room to add more weather and time-based
+            features.
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Scalability</div>
+          <div class="metric-value">Multi-plant</div>
+          <div class="metric-caption">
+            The same cleaning, merging, and modeling pattern works for Alpha, Bravo,
+            and any additional plants — making this a solid base for a larger solar
+            forecasting platform.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span>© <span id="year"></span> Josh Gilkinson · Solar Output Modeling</span>
+      <span>Built for GitHub Pages · Alpha &amp; Bravo plant analytics</span>
+    </footer>
+  </div>
+
+  <!-- Tiny inline script just for dynamic year; safe to remove if you want pure HTML/CSS -->
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
